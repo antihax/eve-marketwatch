@@ -1,7 +1,6 @@
 package marketwatch
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/antihax/goesi/esi"
@@ -27,7 +26,8 @@ type OrderChange struct {
 	Changed      bool
 }
 
-func (s *MarketWatch) storeData(locationID int64, order Order) OrderChange {
+// storeData returns changes or true if the item is new
+func (s *MarketWatch) storeData(locationID int64, order Order) (OrderChange, bool) {
 	change := OrderChange{
 		OrderID:    order.Order.OrderId,
 		LocationId: order.Order.LocationId,
@@ -48,10 +48,10 @@ func (s *MarketWatch) storeData(locationID int64, order Order) OrderChange {
 			change.Duration = order.Order.Duration
 		}
 		sMap.Store(order.Order.OrderId, order)
+		return change, false
 	} else {
-		fmt.Printf("%+v\n", order.Order)
+		return change, true
 	}
-	return change
 }
 
 func (s *MarketWatch) expireOrders(locationID int64, t time.Time) []OrderChange {

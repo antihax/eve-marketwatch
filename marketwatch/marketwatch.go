@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/antihax/eve-marketwatch/wsbroadcast"
+
 	"github.com/antihax/goesi"
 	"golang.org/x/oauth2"
 )
@@ -21,6 +23,8 @@ type MarketWatch struct {
 	token     *oauth2.TokenSource
 	tokenAuth *goesi.SSOAuthenticator
 	market    map[int64]*sync.Map
+
+	broadcast *wsbroadcast.Hub
 }
 
 // NewMarketWatch creates a new MarketWatch microservice
@@ -66,6 +70,9 @@ func NewMarketWatch(refresh, tokenClientID, tokenSecret string) *MarketWatch {
 			"eve-marketwatch",
 		),
 
+		// Websocket Broadcaster
+		broadcast: wsbroadcast.NewHub(),
+
 		// ESI SSO Handler
 		token:     &token,
 		tokenAuth: auth,
@@ -78,8 +85,16 @@ func NewMarketWatch(refresh, tokenClientID, tokenSecret string) *MarketWatch {
 // Run starts listening on port 3005 for API requests
 func (s *MarketWatch) Run() error {
 
+	// Setup the callback to send the market to the client on connect
+	s.broadcast.OnRegister(s.dumpMarket)
+	go s.broadcast.Run()
+
 	go s.startUpMarketWorkers()
 
-	//http.HandleFunc("/killmail", s.killmailHandler)
+	// Handler for the websocket
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		s.broadcast.ServeWs(w, r)
+	})
+
 	return http.ListenAndServe(":3005", nil)
 }

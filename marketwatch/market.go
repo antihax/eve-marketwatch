@@ -2,12 +2,9 @@ package marketwatch
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"sync"
 	"time"
-
-	"github.com/antihax/goesi"
 
 	"github.com/antihax/goesi/esi"
 	"github.com/antihax/goesi/optional"
@@ -31,7 +28,6 @@ func (s *MarketWatch) startUpMarketWorkers() {
 }
 
 func (s *MarketWatch) marketWorker(regionID int32) {
-	log.Printf("start regionID %d\n", regionID)
 	// For totalization
 	wg := sync.WaitGroup{}
 
@@ -96,29 +92,54 @@ func (s *MarketWatch) marketWorker(regionID int32) {
 			continue
 		}
 
+		changes := []OrderChange{}
+		newOrders := []esi.GetMarketsRegionIdOrders200Ok{}
 		// Add all the orders together
 		for o := range rchan {
 			for i := range o {
-				change := s.storeData(int64(regionID), Order{Touched: start, Order: o[i]})
+				change, isNew := s.storeData(int64(regionID), Order{Touched: start, Order: o[i]})
 				numOrders++
-				if change.Changed {
-					fmt.Printf("%+v\n", change)
+				if change.Changed && !isNew {
+					changes = append(changes, change)
+				}
+				if isNew {
+					newOrders = append(newOrders, o[i])
 				}
 			}
 		}
+		deletions := s.expireOrders(int64(regionID), start)
 
-		changes := s.expireOrders(int64(regionID), start)
-		for _, change := range changes {
-			fmt.Printf("%+v\n", change)
+		if len(newOrders) > 0 {
+			s.broadcast.Broadcast(
+				Message{
+					Action:  "addition",
+					Payload: newOrders,
+				},
+			)
 		}
+
+		if len(changes) > 0 {
+			s.broadcast.Broadcast(
+				Message{
+					Action:  "change",
+					Payload: changes,
+				},
+			)
+		}
+
+		if len(deletions) > 0 {
+			s.broadcast.Broadcast(
+				Message{
+					Action:  "deletion",
+					Payload: deletions,
+				},
+			)
+		}
+
 		duration := timeUntilCacheExpires(res)
 		if duration < time.Second { // Sleep at least a minute
-			fmt.Printf("weird stuff happened R %d # %d %s %s\n", regionID, len(orders), time.Now().UTC().String(), goesi.CacheExpires(res).UTC().String())
 			duration = time.Second * 10
 		}
-
-		sanic := time.Since(start)
-		log.Printf("completed regionID %d with %d orders in %s sleeping for %s \n", regionID, numOrders, sanic.String(), duration.String())
 
 		// Sleep until the cache timer expires, plus a little.
 		time.Sleep(duration + time.Second*15)
