@@ -3,12 +3,14 @@ package marketwatch
 import (
 	"context"
 	"log"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/antihax/goesi"
 	"github.com/antihax/goesi/esi"
 	"github.com/antihax/goesi/optional"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func (s *MarketWatch) getAuthContext() context.Context {
@@ -135,6 +137,13 @@ func (s *MarketWatch) structureWorker(structureID int64) {
 			}
 		}
 		deletions := s.expireOrders(structureID, start)
+
+		// Log metrics
+		metricTimePull.With(
+			prometheus.Labels{
+				"locationID": strconv.FormatInt(structureID, 10),
+			},
+		).Observe(float64(time.Since(start).Nanoseconds()) / float64(time.Millisecond))
 
 		if len(newOrders) > 0 {
 			s.broadcast.Broadcast(

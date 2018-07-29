@@ -43,16 +43,15 @@ func (t *ApiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		res, err := t.next.RoundTrip(req)
 		end := time.Now()
 
-		/*	url := urlFilterRe.ReplaceAllString(req.URL.Path, "/")
-			fmt.Printf("%s\n", url)*/
+		endpoint := urlFilterRe.ReplaceAllString(req.URL.Path, "/")
 
 		// Log metrics
 		metricAPICalls.With(
 			prometheus.Labels{
-				"host": req.Host,
-				//"endpoint": req.URL,
-				"status": strconv.Itoa(res.StatusCode),
-				"try":    strconv.Itoa(tries),
+				"host":     req.Host,
+				"endpoint": endpoint,
+				"status":   strconv.Itoa(res.StatusCode),
+				"try":      strconv.Itoa(tries),
 			},
 		).Observe(float64(end.Sub(start).Nanoseconds()) / float64(time.Millisecond))
 
@@ -120,7 +119,7 @@ var (
 		Help:      "API call statistics.",
 		Buckets:   prometheus.ExponentialBuckets(10, 1.45, 20),
 	},
-		[]string{"host", "status", "try"},
+		[]string{"host", "status", "try", "endpoint"},
 	)
 
 	metricAPIErrors = prometheus.NewCounter(prometheus.CounterOpts{

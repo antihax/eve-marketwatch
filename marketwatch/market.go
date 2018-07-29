@@ -3,11 +3,13 @@ package marketwatch
 import (
 	"context"
 	"log"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/antihax/goesi/esi"
 	"github.com/antihax/goesi/optional"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func (s *MarketWatch) startUpMarketWorkers() {
@@ -113,6 +115,13 @@ func (s *MarketWatch) marketWorker(regionID int32) {
 		}
 		deletions := s.expireOrders(int64(regionID), start)
 
+		// Log metrics
+		metricTimePull.With(
+			prometheus.Labels{
+				"locationID": strconv.FormatInt(int64(regionID), 10),
+			},
+		).Observe(float64(time.Since(start).Nanoseconds()) / float64(time.Millisecond))
+
 		if len(newOrders) > 0 {
 			s.broadcast.Broadcast(
 				Message{
@@ -145,4 +154,22 @@ func (s *MarketWatch) marketWorker(regionID int32) {
 		// Sleep until the cache timer expires, plus a little.
 		time.Sleep(duration)
 	}
+}
+
+var (
+	metricTimePull = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "evemarketwatch",
+		Subsystem: "market",
+		Name:      "pull",
+		Help:      "Market Pull Statistics",
+		Buckets:   prometheus.ExponentialBuckets(10, 1.6, 20),
+	},
+		[]string{"locationID"},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(
+		metricTimePull,
+	)
 }
