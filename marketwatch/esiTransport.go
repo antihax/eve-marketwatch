@@ -4,6 +4,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -11,11 +12,14 @@ import (
 )
 
 var apiTransportLimiter chan bool
+var urlFilterRe *regexp.Regexp
 
 func init() {
 	// concurrency limiter
 	// 100 concurrent requests should fill 1 connection
 	apiTransportLimiter = make(chan bool, 100)
+	urlFilterRe = regexp.MustCompile("/v[0-9]{1}/|/[0-9]+/")
+
 }
 
 // ApiTransport custom transport to chain into the HTTPClient to gather statistics.
@@ -34,15 +38,23 @@ func (t *ApiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		// Limit concurrency
 		apiTransportLimiter <- true
 
-		// Time our response
+		// Run the request and time the response
 		start := time.Now()
-
-		// Run the request.
 		res, err := t.next.RoundTrip(req)
+		end := time.Now()
 
+		/*	url := urlFilterRe.ReplaceAllString(req.URL.Path, "/")
+			fmt.Printf("%s\n", url)*/
+
+		// Log metrics
 		metricAPICalls.With(
-			prometheus.Labels{"host": req.Host},
-		).Observe(float64(time.Since(start).Nanoseconds()) / float64(time.Millisecond))
+			prometheus.Labels{
+				"host": req.Host,
+				//"endpoint": req.URL,
+				"status": strconv.Itoa(res.StatusCode),
+				"try":    strconv.Itoa(tries),
+			},
+		).Observe(float64(end.Sub(start).Nanoseconds()) / float64(time.Millisecond))
 
 		// Free the worker
 		<-apiTransportLimiter
@@ -56,7 +68,6 @@ func (t *ApiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 			// Tick up and log any errors
 			if res.StatusCode >= 400 {
 				metricAPIErrors.Inc()
-				//	log.Printf("St: %d Res: %s Tok: %s - %s\n", res.StatusCode, resetS, tokensS, req.URL)
 			}
 
 			// If we cannot decode this is likely from another source.
@@ -109,7 +120,7 @@ var (
 		Help:      "API call statistics.",
 		Buckets:   prometheus.ExponentialBuckets(10, 1.45, 20),
 	},
-		[]string{"host"},
+		[]string{"host", "status", "try"},
 	)
 
 	metricAPIErrors = prometheus.NewCounter(prometheus.CounterOpts{
