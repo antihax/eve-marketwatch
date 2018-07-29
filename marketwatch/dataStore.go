@@ -75,6 +75,7 @@ func (s *MarketWatch) expireOrders(locationID int64, t time.Time) []OrderChange 
 					VolumeRemain: 0,
 					Price:        o.Order.Price,
 					Duration:     o.Order.Duration,
+					TimeChanged:  time.Now().UTC(), // We know this was within 5 minutes of this time
 				})
 			}
 			return true
