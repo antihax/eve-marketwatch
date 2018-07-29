@@ -100,13 +100,13 @@ func (t *ApiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 				}
 				return res, err
 			}
-
-			if tries > 10 {
-				log.Printf("Too many tries %d %s\n", res.StatusCode, req.URL)
-				return res, err
-			}
 		}
 		if res.StatusCode >= 200 && res.StatusCode < 400 {
+			return res, err
+		}
+
+		if tries > 10 {
+			log.Printf("Too many tries\n")
 			return res, err
 		}
 	}
