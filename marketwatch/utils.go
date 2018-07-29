@@ -19,5 +19,11 @@ func getPages(r *http.Response) (int32, error) {
 }
 
 func timeUntilCacheExpires(r *http.Response) time.Duration {
-	return time.Until(goesi.CacheExpires(r))
+	duration := time.Until(goesi.CacheExpires(r))
+	if duration < time.Second {
+		duration = time.Second * 10
+	} else {
+		duration += time.Second * 15
+	}
+	return duration
 }

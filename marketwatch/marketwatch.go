@@ -19,12 +19,24 @@ type MarketWatch struct {
 	// goesi client
 	esi *goesi.APIClient
 
+	// websocket handler
+	broadcast *wsbroadcast.Hub
+
 	// authentication
+	doAuth    bool
 	token     *oauth2.TokenSource
 	tokenAuth *goesi.SSOAuthenticator
-	market    map[int64]*sync.Map
 
-	broadcast *wsbroadcast.Hub
+	// data store
+	market     map[int64]*sync.Map
+	structures map[int64]*Structure
+	mmutex     sync.RWMutex
+	smutex     sync.RWMutex
+}
+
+type Structure struct {
+	restart time.Time
+	running bool
 }
 
 // NewMarketWatch creates a new MarketWatch microservice
@@ -48,6 +60,9 @@ func NewMarketWatch(refresh, tokenClientID, tokenSecret string) *MarketWatch {
 	}
 
 	// Setup an authenticator for our user tokens
+	if tokenClientID == "" || tokenSecret == "" || refresh == "" {
+		log.Println("Warning: Missing authentication parameters so only regional market will be polled")
+	}
 	auth := goesi.NewSSOAuthenticator(httpclient, tokenClientID, tokenSecret, "", []string{})
 
 	tok := &oauth2.Token{
@@ -58,9 +73,12 @@ func NewMarketWatch(refresh, tokenClientID, tokenSecret string) *MarketWatch {
 	}
 
 	// Build our private token
+	doAuth := false
 	token, err := auth.TokenSource(tok)
 	if err != nil {
-		log.Fatalln(err)
+		log.Println("Warning: Failed to authenticate refresh_token so only regional market will be polled")
+	} else {
+		doAuth = true
 	}
 
 	return &MarketWatch{
@@ -74,11 +92,13 @@ func NewMarketWatch(refresh, tokenClientID, tokenSecret string) *MarketWatch {
 		broadcast: wsbroadcast.NewHub(),
 
 		// ESI SSO Handler
+		doAuth:    doAuth,
 		token:     &token,
 		tokenAuth: auth,
 
 		// Market Data Map
-		market: make(map[int64]*sync.Map),
+		market:     make(map[int64]*sync.Map),
+		structures: make(map[int64]*Structure),
 	}
 }
 

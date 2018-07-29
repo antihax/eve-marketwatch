@@ -19,11 +19,15 @@ func (s *MarketWatch) startUpMarketWorkers() {
 
 	for _, region := range regions {
 		// Prebuild the maps
-		s.market[int64(region)] = &sync.Map{}
-
+		s.createMarketStore(int64(region))
+		// Ignore non-market regions
 		if region < 11000000 || region == 11000031 {
 			go s.marketWorker(region)
 		}
+	}
+
+	if s.doAuth {
+		go s.runStructures()
 	}
 }
 
@@ -137,11 +141,8 @@ func (s *MarketWatch) marketWorker(regionID int32) {
 		}
 
 		duration := timeUntilCacheExpires(res)
-		if duration < time.Second { // Sleep at least a minute
-			duration = time.Second * 10
-		}
 
 		// Sleep until the cache timer expires, plus a little.
-		time.Sleep(duration + time.Second*15)
+		time.Sleep(duration)
 	}
 }

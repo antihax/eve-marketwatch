@@ -1,6 +1,7 @@
 package marketwatch
 
 import (
+	"sync"
 	"time"
 
 	"github.com/antihax/goesi/esi"
@@ -34,7 +35,7 @@ func (s *MarketWatch) storeData(locationID int64, order Order) (OrderChange, boo
 		TypeID:     order.Order.TypeId,
 		IsBuyOrder: order.Order.IsBuyOrder,
 	}
-	sMap, _ := s.market[locationID]
+	sMap := s.getMarketStore(locationID)
 	v, loaded := sMap.LoadOrStore(order.Order.OrderId, order)
 	if loaded {
 		cOrder := v.(Order)
@@ -49,13 +50,12 @@ func (s *MarketWatch) storeData(locationID int64, order Order) (OrderChange, boo
 		}
 		sMap.Store(order.Order.OrderId, order)
 		return change, false
-	} else {
-		return change, true
 	}
+	return change, true
 }
 
 func (s *MarketWatch) expireOrders(locationID int64, t time.Time) []OrderChange {
-	sMap, _ := s.market[locationID]
+	sMap := s.getMarketStore(locationID)
 	changes := []OrderChange{}
 
 	// Find any expired orders
@@ -84,4 +84,34 @@ func (s *MarketWatch) expireOrders(locationID int64, t time.Time) []OrderChange 
 	}
 
 	return changes
+}
+
+// getMarketStore for a location
+func (s *MarketWatch) getMarketStore(locationID int64) *sync.Map {
+	s.mmutex.RLock()
+	defer s.mmutex.RUnlock()
+	return s.market[locationID]
+}
+
+// createMarketStore for a location
+func (s *MarketWatch) createMarketStore(locationID int64) {
+	s.mmutex.Lock()
+	defer s.mmutex.Unlock()
+	s.market[locationID] = &sync.Map{}
+}
+
+// getStructureState for a location
+func (s *MarketWatch) getStructureState(locationID int64) *Structure {
+	s.smutex.RLock()
+	defer s.smutex.RUnlock()
+	return s.structures[locationID]
+}
+
+// createStructureState for a location
+func (s *MarketWatch) createStructureState(locationID int64) *Structure {
+	state := &Structure{}
+	s.smutex.Lock()
+	defer s.smutex.Unlock()
+	s.structures[locationID] = state
+	return state
 }
