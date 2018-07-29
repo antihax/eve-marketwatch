@@ -45,21 +45,22 @@ func (t *ApiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 		endpoint := urlFilterRe.ReplaceAllString(req.URL.Path, "/")
 
-		// Log metrics
-		metricAPICalls.With(
-			prometheus.Labels{
-				"host":     req.Host,
-				"endpoint": endpoint,
-				"status":   strconv.Itoa(res.StatusCode),
-				"try":      strconv.Itoa(tries),
-			},
-		).Observe(float64(end.Sub(start).Nanoseconds()) / float64(time.Millisecond))
-
 		// Free the worker
 		<-apiTransportLimiter
 
 		// We got a response
 		if res != nil {
+
+			// Log metrics
+			metricAPICalls.With(
+				prometheus.Labels{
+					"host":     req.Host,
+					"endpoint": endpoint,
+					"status":   strconv.Itoa(res.StatusCode),
+					"try":      strconv.Itoa(tries),
+				},
+			).Observe(float64(end.Sub(start).Nanoseconds()) / float64(time.Millisecond))
+
 			// Get the ESI error information
 			resetS := res.Header.Get("x-esi-error-limit-reset")
 			tokensS := res.Header.Get("x-esi-error-limit-remain")
