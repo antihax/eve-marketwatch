@@ -1,8 +1,6 @@
 package marketwatch
 
 import (
-	"log"
-
 	"github.com/antihax/goesi/esi"
 )
 
@@ -14,7 +12,7 @@ type Message struct {
 
 func (s *MarketWatch) dumpMarket() interface{} {
 	m := []esi.GetMarketsRegionIdOrders200Ok{}
-	log.Printf("Dumping market\n")
+
 	// loop all the locations and dump into the structure
 	for _, r := range s.market {
 		r.Range(
@@ -24,7 +22,6 @@ func (s *MarketWatch) dumpMarket() interface{} {
 				return true
 			})
 	}
-	log.Printf("dump complete\n")
 	// return the whole thing.
 	return Message{
 		Action:  "addition",
