@@ -16,24 +16,26 @@ type Order struct {
 
 // OrderChange Details of what changed on an order
 type OrderChange struct {
-	OrderID      int64
-	LocationId   int64
-	TypeID       int32
-	VolumeChange int32
-	VolumeRemain int32
-	Price        float64
-	Duration     int32
-	IsBuyOrder   bool
-	Changed      bool
+	OrderID      int64     `json:"order_id"`
+	LocationId   int64     `json:"location_id"`
+	TypeID       int32     `json:"type_id"`
+	VolumeChange int32     `json:"volume_change,omitempty"`
+	VolumeRemain int32     `json:"volume_remain,omitempty"`
+	Price        float64   `json:"price"`
+	Duration     int32     `json:"duration,omitempty"`
+	IsBuyOrder   bool      `json:"is_buy_order,omitempty"`
+	Changed      bool      `json:"-"`
+	TimeChanged  time.Time `json:"time_changed"`
 }
 
 // storeData returns changes or true if the item is new
 func (s *MarketWatch) storeData(locationID int64, order Order) (OrderChange, bool) {
 	change := OrderChange{
-		OrderID:    order.Order.OrderId,
-		LocationId: order.Order.LocationId,
-		TypeID:     order.Order.TypeId,
-		IsBuyOrder: order.Order.IsBuyOrder,
+		OrderID:     order.Order.OrderId,
+		LocationId:  order.Order.LocationId,
+		TypeID:      order.Order.TypeId,
+		IsBuyOrder:  order.Order.IsBuyOrder,
+		TimeChanged: time.Now().UTC(), // We know this was within 5 minutes of this time
 	}
 	sMap := s.getMarketStore(locationID)
 	v, loaded := sMap.LoadOrStore(order.Order.OrderId, order)
