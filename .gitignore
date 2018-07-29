@@ -12,4 +12,3 @@ coverage.txt
 teamspeakToken.txt
 /bin/*
 mock-local.sh
-/json/*
