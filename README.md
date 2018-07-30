@@ -1,6 +1,10 @@
 # eve-marketwatch
 
-Provides a killmail to attribute service to resolve dogma into a json output of a fittings capability.
+Self contained microservice to collect market data and stream all additions, changes, and deletions over a websocket. On connect a dump of the current state will be sent (it is quite big) followed by a stream of all changes.
+
+This can be used to keep a database synchronized with the current market state, try to estimate completed orders for history, track players persistently making frequent changes (*cough* bots *cough*), or to find high value items sold to try to gank the player later. The possibilities are endless!
+
+The microservice will spawn one goroutine (think lightweight thread) per market and collect the next available set of data when the cache time expires. Pages are also concurrently pulled with a concurrency limit of 100 requests in flight to keep everything to one https connection. 
 
 ## dockerized
 
@@ -21,6 +25,8 @@ You will need to use another tool to obtain a refresh_token using the clientID a
 | ESI_CLIENTID_TOKENSTORE | SSO ClientID |
 | ESI_SECRET_TOKENSTORE | SSO Secret |
 | ESI_REFRESHKEY | a refresh_token from the ClientID and Secret above |
+
+Note: turning on structures will cause an initial performance hit as the service discovers which structures actually have a market. The consumer will spew errors and hit the error limit, but after an hour, this should settle and then operate smoothly.
 
 ## operation
 
