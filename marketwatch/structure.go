@@ -22,7 +22,8 @@ func (s *MarketWatch) runStructures() {
 		// Get all the structures and fire up workers for each
 		structures, res, err := s.esi.ESI.UniverseApi.GetUniverseStructures(s.getAuthContext(), nil)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			continue
 		}
 		for _, structure := range structures {
 			state := s.getStructureState(structure)
