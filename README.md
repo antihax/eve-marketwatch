@@ -56,7 +56,6 @@ Changes and deletions will be an array of the following types. Deletions will al
 	int32     `json:"duration,omitempty"`
     bool      `json:"is_buy_order,omitempty"`
     time.Time `json:"issued,omitempty"`
-	bool      `json:"-"`
 	time.Time `json:"time_changed"`
 ``` 
 
