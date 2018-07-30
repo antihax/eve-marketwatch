@@ -39,7 +39,7 @@ The `:3000` port has prometheus stats and golang pprof information. This port sh
 ## data received
 
 Data will be encapsulated in a json frame. 
-```json
+```
 {"action": "actionstring", "payload": { json payload }}
 ``` 
 Payloads are as follows
@@ -53,15 +53,15 @@ ESI formatted [market orders](https://esi.evetech.net/ui/#/Market/get_markets_re
 Changes and deletions will be an array of the following types. Deletions will also have a volume_remain of 0.
 
 ```golang
-	int64     `json:"order_id"`
-	int64     `json:"location_id"`
-	int32     `json:"type_id"`
-	int32     `json:"volume_change,omitempty"`
-	int32     `json:"volume_remain,omitempty"`
-	float64   `json:"price"`
-	int32     `json:"duration,omitempty"`
-    bool      `json:"is_buy_order,omitempty"`
-    time.Time `json:"issued,omitempty"`
-	time.Time `json:"time_changed"`
+int64		`json:"order_id"`
+int64		`json:"location_id"`
+int32		`json:"type_id"`
+int32		`json:"volume_change,omitempty"`
+int32		`json:"volume_remain,omitempty"`
+float64		`json:"price"`
+int32		`json:"duration,omitempty"`
+bool		`json:"is_buy_order,omitempty"`
+time.Time	`json:"issued,omitempty"`
+time.Time	`json:"time_changed"`
 ``` 
 
