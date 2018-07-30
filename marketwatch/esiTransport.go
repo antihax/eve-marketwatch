@@ -40,7 +40,7 @@ func (t *ApiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 		// Run the request and time the response
 		start := time.Now()
-		res, err := t.next.RoundTrip(req)
+		res, triperr := t.next.RoundTrip(req)
 		end := time.Now()
 
 		endpoint := urlFilterRe.ReplaceAllString(req.URL.Path, "/")
@@ -98,16 +98,16 @@ func (t *ApiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 				if res.StatusCode != 403 {
 					log.Printf("Giving up %d %s\n", res.StatusCode, req.URL)
 				}
-				return res, err
+				return res, triperr
 			}
-		}
-		if res.StatusCode >= 200 && res.StatusCode < 400 {
-			return res, err
+			if res.StatusCode >= 200 && res.StatusCode < 400 {
+				return res, triperr
+			}
 		}
 
 		if tries > 10 {
 			log.Printf("Too many tries\n")
-			return res, err
+			return res, triperr
 		}
 	}
 }
