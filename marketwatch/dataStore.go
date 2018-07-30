@@ -24,6 +24,7 @@ type OrderChange struct {
 	Price        float64   `json:"price"`
 	Duration     int32     `json:"duration,omitempty"`
 	IsBuyOrder   bool      `json:"is_buy_order,omitempty"`
+	Issued       time.Time `json:"issued,omitempty"`
 	Changed      bool      `json:"-"`
 	TimeChanged  time.Time `json:"time_changed"`
 }
@@ -34,6 +35,7 @@ func (s *MarketWatch) storeData(locationID int64, order Order) (OrderChange, boo
 		OrderID:     order.Order.OrderId,
 		LocationId:  order.Order.LocationId,
 		TypeID:      order.Order.TypeId,
+		Issued:      order.Order.Issued,
 		IsBuyOrder:  order.Order.IsBuyOrder,
 		TimeChanged: time.Now().UTC(), // We know this was within 5 minutes of this time
 	}
@@ -69,6 +71,7 @@ func (s *MarketWatch) expireOrders(locationID int64, t time.Time) []OrderChange 
 					OrderID:      o.Order.OrderId,
 					LocationId:   o.Order.LocationId,
 					TypeID:       o.Order.TypeId,
+					Issued:       o.Order.Issued,
 					IsBuyOrder:   o.Order.IsBuyOrder,
 					Changed:      true,
 					VolumeChange: o.Order.VolumeRemain,
