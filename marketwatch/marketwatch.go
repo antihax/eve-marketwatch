@@ -55,8 +55,11 @@ func NewMarketWatch(refresh, tokenClientID, tokenSecret string) *MarketWatch {
 	}
 
 	// Setup an authenticator for our user tokens
+	doAuth := false
 	if tokenClientID == "" || tokenSecret == "" || refresh == "" {
 		log.Println("Warning: Missing authentication parameters so only regional market will be polled")
+	} else {
+		doAuth = true
 	}
 	auth := goesi.NewSSOAuthenticator(httpclient, tokenClientID, tokenSecret, "", []string{})
 
@@ -68,12 +71,9 @@ func NewMarketWatch(refresh, tokenClientID, tokenSecret string) *MarketWatch {
 	}
 
 	// Build our private token
-	doAuth := false
 	token, err := auth.TokenSource(tok)
 	if err != nil {
 		log.Println("Warning: Failed to authenticate refresh_token so only regional market will be polled")
-	} else {
-		doAuth = true
 	}
 
 	return &MarketWatch{
