@@ -2,7 +2,6 @@ package marketwatch
 
 import (
 	"log"
-	"math/rand"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -19,7 +18,6 @@ func init() {
 	// 100 concurrent requests should fill 1 connection
 	apiTransportLimiter = make(chan bool, 100)
 	urlFilterRe = regexp.MustCompile("/v[0-9]{1}/|/[0-9]+/")
-
 }
 
 // ApiTransport custom transport to chain into the HTTPClient to gather statistics.
@@ -29,17 +27,16 @@ type ApiTransport struct {
 
 // RoundTrip wraps http.DefaultTransport.RoundTrip to provide stats and handle error rates.
 func (t *ApiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	// Loop until success
+	// Limit concurrency
+	apiTransportLimiter <- true
+
+	// Free the worker
+	defer func() { <-apiTransportLimiter }() // Loop until success
+
 	tries := 0
 	for {
 		// Tickup retry counter
 		tries++
-
-		// Limit concurrency
-		apiTransportLimiter <- true
-
-		// Free the worker
-		defer func() { <-apiTransportLimiter }()
 
 		// Run the request and time the response
 		start := time.Now()
@@ -50,7 +47,6 @@ func (t *ApiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 		// We got a response
 		if res != nil {
-
 			// Log metrics
 			metricAPICalls.With(
 				prometheus.Labels{
@@ -84,11 +80,10 @@ func (t *ApiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 			// Backoff
 			if res.StatusCode == 420 { // Something went wrong
-				duration := reset * ((1 + rand.Float64()) * 5)
-				time.Sleep(time.Duration(duration) * time.Second)
+				time.Sleep(time.Duration(reset) * time.Second)
 			} else if esiRateLimiter { // Sleep based on error rate.
 				percentRemain := 1 - (tokens / 100)
-				duration := reset * percentRemain * (1 + rand.Float64())
+				duration := reset * percentRemain
 				time.Sleep(time.Second * time.Duration(duration))
 			} else if !esiRateLimiter { // Not an ESI error
 				time.Sleep(time.Second * time.Duration(tries))

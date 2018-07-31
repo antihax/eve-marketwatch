@@ -41,13 +41,13 @@ func NewMarketWatch(refresh, tokenClientID, tokenSecret string) *MarketWatch {
 			next: &http.Transport{
 				MaxIdleConns: 200,
 				DialContext: (&net.Dialer{
-					Timeout:   10 * time.Second,
+					Timeout:   300 * time.Second,
 					KeepAlive: 5 * 60 * time.Second,
 					DualStack: true,
 				}).DialContext,
 				IdleConnTimeout:       5 * 60 * time.Second,
 				TLSHandshakeTimeout:   10 * time.Second,
-				ResponseHeaderTimeout: 15 * time.Second,
+				ResponseHeaderTimeout: 60 * time.Second,
 				ExpectContinueTimeout: 0,
 				MaxIdleConnsPerHost:   20,
 			},

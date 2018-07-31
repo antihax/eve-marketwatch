@@ -2,6 +2,8 @@ package marketwatch
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"sync"
@@ -24,6 +26,7 @@ func (s *MarketWatch) startUpMarketWorkers() {
 		s.createMarketStore(int64(region))
 		// Ignore non-market regions
 		if region < 11000000 || region == 11000031 {
+			time.Sleep(time.Millisecond * 500)
 			go s.marketWorker(region)
 		}
 	}
@@ -61,6 +64,12 @@ func (s *MarketWatch) marketWorker(regionID int32) {
 			log.Println(err)
 			continue
 		}
+		duration := timeUntilCacheExpires(res)
+		if duration.Minutes() < 3 {
+			fmt.Printf("%d too close to window: waiting %s\n", regionID, duration.String())
+			time.Sleep(duration)
+			continue
+		}
 
 		// Get the other pages concurrently
 		for pages > 1 {
@@ -68,15 +77,21 @@ func (s *MarketWatch) marketWorker(regionID int32) {
 			go func(page int32) {
 				defer wg.Done() // release when done
 
-				orders, _, err := s.esi.ESI.MarketApi.GetMarketsRegionIdOrders(
+				orders, r, err := s.esi.ESI.MarketApi.GetMarketsRegionIdOrders(
 					context.Background(),
 					"all",
 					regionID,
 					&esi.GetMarketsRegionIdOrdersOpts{Page: optional.NewInt32(page)},
 				)
-
 				if err != nil {
 					echan <- err
+					return
+				}
+
+				// Are we too close to the end of the window?
+				duration := timeUntilCacheExpires(r)
+				if duration.Seconds() < 20 {
+					echan <- errors.New("too close to end of window")
 					return
 				}
 
@@ -148,8 +163,6 @@ func (s *MarketWatch) marketWorker(regionID int32) {
 				},
 			)
 		}
-
-		duration := timeUntilCacheExpires(res)
 
 		// Sleep until the cache timer expires, plus a little.
 		time.Sleep(duration)

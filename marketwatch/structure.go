@@ -2,6 +2,8 @@ package marketwatch
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"sync"
@@ -38,7 +40,7 @@ func (s *MarketWatch) runStructures() {
 				state = s.createStructureState(structure)
 			}
 			if state.running == false && time.Now().After(state.restart) {
-				time.Sleep(time.Millisecond * 500)
+				time.Sleep(time.Second * 1)
 				state.running = true
 				go s.structureWorker(structure)
 			}
@@ -80,7 +82,12 @@ func (s *MarketWatch) structureWorker(structureID int64) {
 		}
 
 		rchan <- orders
-
+		duration := timeUntilCacheExpires(res)
+		if duration.Minutes() < 3 {
+			fmt.Printf("%d too close to window: waiting %s\n", structureID, duration.String())
+			time.Sleep(duration)
+			continue
+		}
 		// Figure out if there are more pages
 		pages, err := getPages(res)
 		if err != nil {
@@ -94,7 +101,7 @@ func (s *MarketWatch) structureWorker(structureID int64) {
 			go func(page int32) {
 				defer wg.Done() // release when done
 
-				orders, _, err := s.esi.ESI.MarketApi.GetMarketsStructuresStructureId(
+				orders, r, err := s.esi.ESI.MarketApi.GetMarketsStructuresStructureId(
 					context.Background(),
 					structureID,
 					&esi.GetMarketsStructuresStructureIdOpts{Page: optional.NewInt32(page)},
@@ -102,6 +109,13 @@ func (s *MarketWatch) structureWorker(structureID int64) {
 
 				if err != nil {
 					echan <- err
+					return
+				}
+
+				// Are we too close to the end of the window?
+				duration := timeUntilCacheExpires(r)
+				if duration.Seconds() < 20 {
+					echan <- errors.New("too close to end of window")
 					return
 				}
 
@@ -177,8 +191,6 @@ func (s *MarketWatch) structureWorker(structureID int64) {
 				},
 			)
 		}
-
-		duration := timeUntilCacheExpires(res)
 
 		// Sleep until the cache timer expires
 		time.Sleep(duration)
