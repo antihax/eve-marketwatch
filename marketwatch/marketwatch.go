@@ -34,11 +34,6 @@ type MarketWatch struct {
 	smutex     sync.RWMutex
 }
 
-type Structure struct {
-	restart time.Time
-	running bool
-}
-
 // NewMarketWatch creates a new MarketWatch microservice
 func NewMarketWatch(refresh, tokenClientID, tokenSecret string) *MarketWatch {
 	httpclient := &http.Client{

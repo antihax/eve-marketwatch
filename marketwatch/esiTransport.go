@@ -38,15 +38,15 @@ func (t *ApiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		// Limit concurrency
 		apiTransportLimiter <- true
 
+		// Free the worker
+		defer func() { <-apiTransportLimiter }()
+
 		// Run the request and time the response
 		start := time.Now()
 		res, triperr := t.next.RoundTrip(req)
 		end := time.Now()
 
 		endpoint := urlFilterRe.ReplaceAllString(req.URL.Path, "/")
-
-		// Free the worker
-		<-apiTransportLimiter
 
 		// We got a response
 		if res != nil {
@@ -68,6 +68,7 @@ func (t *ApiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 			// Tick up and log any errors
 			if res.StatusCode >= 400 {
 				metricAPIErrors.Inc()
+				log.Printf("St: %d Res: %s Tok: %s - %s\n", res.StatusCode, resetS, tokensS, req.URL)
 			}
 
 			// If we cannot decode this is likely from another source.

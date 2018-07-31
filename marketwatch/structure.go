@@ -13,6 +13,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+type Structure struct {
+	restart time.Time
+	running bool
+}
+
 func (s *MarketWatch) getAuthContext() context.Context {
 	return context.WithValue(context.Background(), goesi.ContextOAuth2, *s.token)
 }
@@ -44,7 +49,7 @@ func (s *MarketWatch) runStructures() {
 
 func (s *MarketWatch) failStructure(structureID int64) {
 	state := s.getStructureState(structureID)
-	state.restart = time.Now().Add(time.Hour * 6)
+	state.restart = time.Now().Add(time.Hour * 12)
 	state.running = false
 }
 
