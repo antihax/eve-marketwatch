@@ -6,7 +6,8 @@ services:
   - docker
 
 after_success:
-  - if [ "$TRAVIS_BRANCH" == "master" ]
+  - |
+    if [ "$TRAVIS_BRANCH" == "master" ]
     then
       ./build.sh;
       docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
