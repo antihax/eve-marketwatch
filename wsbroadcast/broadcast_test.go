@@ -14,8 +14,8 @@ func TestWebSocket(t *testing.T) {
 	// Setup a new hub
 	hub := NewHub()
 
-	hub.OnRegister(func() interface{} {
-		return "sup"
+	hub.OnRegister(func(send chan interface{}) {
+		send <- "sup"
 	})
 
 	go hub.Run()
