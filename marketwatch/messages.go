@@ -10,21 +10,28 @@ type Message struct {
 	Payload interface{} `json:"payload"`
 }
 
-func (s *MarketWatch) dumpMarket() interface{} {
-	m := []esi.GetMarketsRegionIdOrders200Ok{}
+func (s *MarketWatch) dumpMarket(send chan interface{}) {
 
-	// loop all the locations and dump into the structure
+	// Prevent changes to the map while we loop
+	s.mmutex.RLock()
+	defer s.mmutex.RUnlock()
+
+	// loop all the locations
 	for _, r := range s.market {
+		// Build a list
+		m := []esi.GetMarketsRegionIdOrders200Ok{}
 		r.Range(
 			func(k, v interface{}) bool {
 				o := v.(Order)
 				m = append(m, o.Order)
 				return true
 			})
-	}
-	// return the whole thing.
-	return Message{
-		Action:  "addition",
-		Payload: m,
+		// send the list out
+		if len(m) > 0 {
+			send <- Message{
+				Action:  "addition",
+				Payload: m,
+			}
+		}
 	}
 }

@@ -8,7 +8,7 @@ import (
 )
 
 // HandlerFunc is used for callbacks
-type HandlerFunc func() interface{}
+type HandlerFunc func(chan interface{})
 
 // Hub maintains the set of active clients and broadcasts messages to the
 // clients.
@@ -56,7 +56,7 @@ func (h *Hub) Run() {
 		case client := <-h.register:
 			h.clients[client] = true
 			for _, c := range h.onRegister {
-				client.send <- c()
+				c(client.send)
 			}
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
@@ -78,7 +78,7 @@ func (h *Hub) Run() {
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
-	WriteBufferSize: 1024 * 1024 * 200,
+	WriteBufferSize: 1024 * 1024 * 500,
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
