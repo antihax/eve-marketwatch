@@ -15,7 +15,6 @@ import (
 
 // MarketWatch provides CCP Market Data
 type MarketWatch struct {
-
 	// goesi client
 	esi *goesi.APIClient
 
@@ -30,8 +29,10 @@ type MarketWatch struct {
 	// data store
 	market     map[int64]*sync.Map
 	structures map[int64]*Structure
-	mmutex     sync.RWMutex
-	smutex     sync.RWMutex
+	contracts  map[int64]*sync.Map
+	mmutex     sync.RWMutex // Market mutex for the main map
+	cmutex     sync.RWMutex // Contract mutex for the main map
+	smutex     sync.RWMutex // Structure mutex for the whole map
 }
 
 // NewMarketWatch creates a new MarketWatch microservice
@@ -84,7 +85,7 @@ func NewMarketWatch(refresh, tokenClientID, tokenSecret string) *MarketWatch {
 		),
 
 		// Websocket Broadcaster
-		broadcast: wsbroadcast.NewHub(),
+		broadcast: wsbroadcast.NewHub([]string{"market", "contract"}),
 
 		// ESI SSO Handler
 		doAuth:    doAuth,
@@ -94,6 +95,7 @@ func NewMarketWatch(refresh, tokenClientID, tokenSecret string) *MarketWatch {
 		// Market Data Map
 		market:     make(map[int64]*sync.Map),
 		structures: make(map[int64]*Structure),
+		contracts:  make(map[int64]*sync.Map),
 	}
 }
 

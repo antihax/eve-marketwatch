@@ -159,7 +159,7 @@ func (s *MarketWatch) structureWorker(structureID int64) {
 		deletions := s.expireOrders(structureID, start)
 
 		// Log metrics
-		metricTimePull.With(
+		metricMarketTimePull.With(
 			prometheus.Labels{
 				"locationID": strconv.FormatInt(structureID, 10),
 			},
@@ -167,6 +167,7 @@ func (s *MarketWatch) structureWorker(structureID int64) {
 
 		if len(newOrders) > 0 {
 			s.broadcast.Broadcast(
+				"market",
 				Message{
 					Action:  "addition",
 					Payload: newOrders,
@@ -176,6 +177,7 @@ func (s *MarketWatch) structureWorker(structureID int64) {
 
 		if len(changes) > 0 {
 			s.broadcast.Broadcast(
+				"market",
 				Message{
 					Action:  "change",
 					Payload: changes,
@@ -185,6 +187,7 @@ func (s *MarketWatch) structureWorker(structureID int64) {
 
 		if len(deletions) > 0 {
 			s.broadcast.Broadcast(
+				"market",
 				Message{
 					Action:  "deletion",
 					Payload: deletions,
@@ -197,6 +200,7 @@ func (s *MarketWatch) structureWorker(structureID int64) {
 	}
 }
 
+// helper to copy a structure to a region to simplify storage.
 func sToR(o esi.GetMarketsStructuresStructureId200Ok) esi.GetMarketsRegionIdOrders200Ok {
 	return esi.GetMarketsRegionIdOrders200Ok{
 		Duration:     o.Duration,

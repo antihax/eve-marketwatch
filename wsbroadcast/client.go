@@ -27,6 +27,14 @@ type Client struct {
 
 	// Buffered channel of outbound messages.
 	send chan interface{}
+
+	// Channels available to the client
+	channels map[string]bool
+}
+
+// CanSend checks if the client is subscribed to a channel
+func (c *Client) CanSend(channel string) bool {
+	return c.channels[channel]
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -80,6 +88,7 @@ func (c *Client) writePump() {
 			}
 
 			// Write the object out
+
 			err := c.conn.WriteJSON(message)
 			if err != nil {
 				log.Println(err)

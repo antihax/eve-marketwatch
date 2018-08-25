@@ -14,28 +14,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (s *MarketWatch) startUpMarketWorkers() {
-	// Get all the regions and fire up workers for each
-	regions, _, err := s.esi.ESI.UniverseApi.GetUniverseRegions(context.Background(), nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, region := range regions {
-		// Prebuild the maps
-		s.createMarketStore(int64(region))
-		// Ignore non-market regions
-		if region < 11000000 || region == 11000031 {
-			time.Sleep(time.Millisecond * 500)
-			go s.marketWorker(region)
-		}
-	}
-
-	if s.doAuth {
-		go s.runStructures()
-	}
-}
-
 func (s *MarketWatch) marketWorker(regionID int32) {
 	// For totalization
 	wg := sync.WaitGroup{}
@@ -66,7 +44,7 @@ func (s *MarketWatch) marketWorker(regionID int32) {
 		}
 		duration := timeUntilCacheExpires(res)
 		if duration.Minutes() < 3 {
-			fmt.Printf("%d too close to window: waiting %s\n", regionID, duration.String())
+			fmt.Printf("%d market too close to window: waiting %s\n", regionID, duration.String())
 			time.Sleep(duration)
 			continue
 		}
@@ -91,7 +69,7 @@ func (s *MarketWatch) marketWorker(regionID int32) {
 				// Are we too close to the end of the window?
 				duration := timeUntilCacheExpires(r)
 				if duration.Seconds() < 20 {
-					echan <- errors.New("too close to end of window")
+					echan <- errors.New("market too close to end of window")
 					return
 				}
 
@@ -131,7 +109,7 @@ func (s *MarketWatch) marketWorker(regionID int32) {
 		deletions := s.expireOrders(int64(regionID), start)
 
 		// Log metrics
-		metricTimePull.With(
+		metricMarketTimePull.With(
 			prometheus.Labels{
 				"locationID": strconv.FormatInt(int64(regionID), 10),
 			},
@@ -139,6 +117,7 @@ func (s *MarketWatch) marketWorker(regionID int32) {
 
 		if len(newOrders) > 0 {
 			s.broadcast.Broadcast(
+				"market",
 				Message{
 					Action:  "addition",
 					Payload: newOrders,
@@ -148,6 +127,7 @@ func (s *MarketWatch) marketWorker(regionID int32) {
 
 		if len(changes) > 0 {
 			s.broadcast.Broadcast(
+				"market",
 				Message{
 					Action:  "change",
 					Payload: changes,
@@ -157,6 +137,7 @@ func (s *MarketWatch) marketWorker(regionID int32) {
 
 		if len(deletions) > 0 {
 			s.broadcast.Broadcast(
+				"market",
 				Message{
 					Action:  "deletion",
 					Payload: deletions,
@@ -169,8 +150,9 @@ func (s *MarketWatch) marketWorker(regionID int32) {
 	}
 }
 
+// Metrics
 var (
-	metricTimePull = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+	metricMarketTimePull = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: "evemarketwatch",
 		Subsystem: "market",
 		Name:      "pull",
@@ -183,6 +165,6 @@ var (
 
 func init() {
 	prometheus.MustRegister(
-		metricTimePull,
+		metricMarketTimePull,
 	)
 }

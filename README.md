@@ -1,6 +1,6 @@
 # eve-marketwatch
 
-Self contained microservice to collect market data and stream all additions, changes, and deletions over a websocket. On connect a dump of the current state will be sent (it is quite big) followed by a stream of all changes.
+Self contained microservice to collect market and contract data and stream all additions, changes, and deletions over a websocket. On connect a dump of the current state will be sent (it is quite big) followed by a stream of all changes.
 
 This can be used to keep a database synchronized with the current market state, try to estimate completed orders for history, track players persistently making frequent changes (*cough* bots *cough*), or to find high value items sold to try to gank the player later. The possibilities are endless!
 
@@ -29,8 +29,10 @@ You will need to use another tool to obtain a refresh_token using the clientID a
 Note: turning on structures will cause an initial performance hit as the service discovers which structures actually have a market. The consumer will spew errors and hit the error limit, but after an hour, this should settle and then operate smoothly.
 
 ## operation
+Subscription parameters can be sent in the websocket URL to determine which channel to subscribe to.
+The following will subscribe to both market and contract streams.
 
-Connect to the websocket on port 3005 `ws://address:3005/` and receive a stream of JSON data of market changes. On initial connect, you will receive a dump of the current market state.
+Connect to the websocket on port 3005 `ws://address:3005/?market=1&contract=1` and receive a stream of JSON data of market and contract changes. On initial connect, you will receive a dump of the current market state.
 
 Recommendation is to read messages asap and put them into queues so as not to hit timeout states on the websocket.
 

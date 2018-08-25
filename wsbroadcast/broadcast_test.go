@@ -12,9 +12,9 @@ import (
 
 func TestWebSocket(t *testing.T) {
 	// Setup a new hub
-	hub := NewHub()
+	hub := NewHub([]string{"market"})
 
-	hub.OnRegister(func(send chan interface{}) {
+	hub.OnRegister(func(subs map[string]bool, send chan interface{}) {
 		send <- "sup"
 	})
 
