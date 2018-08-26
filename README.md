@@ -67,3 +67,27 @@ time.Time	`json:"issued,omitempty"`
 time.Time	`json:"time_changed"`
 ``` 
 
+### contractAddition
+
+Wrapped ESI formatted
+```golang
+type FullContract struct {
+	Contract esi.GetContractsPublicRegionId200Ok          `json:"contract"`
+	Items    []esi.GetContractsPublicItemsContractId200Ok `json:"items,omitempty"`
+	Bids     []esi.GetContractsPublicBidsContractId200Ok  `json:"bids,omitempty"`
+}
+```
+
+### contractChange and contractDeletion
+```golang
+type ContractChange struct {
+	ContractId  int32                                       `json:"contract_id"`
+	LocationId  int64                                       `json:"location_id"`
+	Expired     bool                                        `json:"expired,omitempty"`
+	DateExpired time.Time                                   `json:"date_expired,omitempty"`
+	Bids        []esi.GetContractsPublicBidsContractId200Ok `json:"bids,omitempty"`
+	Price       float64                                     `json:"price,omitempty"`
+	Type_       string                                      `json:"type,omitempty"`
+	TimeChanged time.Time                                   `json:"time_changed,omitempty"`
+}
+```
