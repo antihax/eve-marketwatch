@@ -97,7 +97,6 @@ func (s *MarketWatch) contractWorker(regionID int32) {
 			for i := range o {
 
 				contract := Contract{Touched: start, Contract: FullContract{Contract: o[i]}}
-				change, isNew := s.storeContract(int64(regionID), contract)
 
 				if o[i].Type_ == "item_exchange" || o[i].Type_ == "auction" {
 					err := s.getContractItems(&contract)
@@ -113,6 +112,7 @@ func (s *MarketWatch) contractWorker(regionID int32) {
 					}
 				}
 
+				change, isNew := s.storeContract(int64(regionID), contract)
 				numContracts++
 				if change.Changed && !isNew {
 					changes = append(changes, change)
@@ -283,7 +283,7 @@ func (s *MarketWatch) getContractBids(contract *Contract) error {
 		return err
 	}
 
-	// Add all the contracts together
+	// Add all the bids together
 	for o := range rchan {
 		contract.Contract.Bids = append(contract.Contract.Bids, o...)
 	}

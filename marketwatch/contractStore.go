@@ -13,6 +13,8 @@ type Contract struct {
 	Touched  time.Time
 	Contract FullContract
 }
+
+// FullContract adds all three esi returns together
 type FullContract struct {
 	Contract esi.GetContractsPublicRegionId200Ok          `json:"contract"`
 	Items    []esi.GetContractsPublicItemsContractId200Ok `json:"items,omitempty"`
@@ -24,11 +26,13 @@ type FullContract struct {
 type ContractChange struct {
 	ContractId  int32                                       `json:"contract_id"`
 	LocationId  int64                                       `json:"location_id"`
-	Expired     bool                                        `json:"expired"`
+	Expired     bool                                        `json:"expired,omitempty"`
+	DateExpired time.Time                                   `json:"date_expired,omitempty"`
 	Changed     bool                                        `json:"-"`
-	Bids        []esi.GetContractsPublicBidsContractId200Ok `json:"bids"`
-	Price       float64                                     `json:"price"`
-	TimeChanged time.Time                                   `json:"time_changed"`
+	Bids        []esi.GetContractsPublicBidsContractId200Ok `json:"bids,omitempty"`
+	Price       float64                                     `json:"price,omitempty"`
+	Type_       string                                      `json:"type,omitempty"`
+	TimeChanged time.Time                                   `json:"time_changed,omitempty"`
 }
 
 // storeContract returns changes or true if the item is new
@@ -46,8 +50,9 @@ func (s *MarketWatch) storeContract(locationID int64, c Contract) (ContractChang
 		if len(contract.Contract.Bids) != len(c.Contract.Bids) {
 			change.Price = contract.Contract.Contract.Price
 			change.Bids = contract.Contract.Bids
+			change.Type_ = contract.Contract.Contract.Type_
+			change.DateExpired = contract.Contract.Contract.DateExpired
 			change.Changed = true
-
 		}
 		sMap.Store(contract.Contract.Contract.ContractId, contract)
 		return change, false
@@ -73,6 +78,9 @@ func (s *MarketWatch) expireContracts(locationID int64, t time.Time) []ContractC
 					ContractId:  o.Contract.Contract.ContractId,
 					LocationId:  o.Contract.Contract.StartLocationId,
 					Price:       o.Contract.Contract.Price,
+					Bids:        o.Contract.Bids,
+					Type_:       o.Contract.Contract.Type_,
+					DateExpired: o.Contract.Contract.DateExpired,
 					Changed:     true,
 					Expired:     expired,
 					TimeChanged: time.Now().UTC(), // We know this was within 30 minutes of this time
