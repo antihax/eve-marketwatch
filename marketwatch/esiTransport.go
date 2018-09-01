@@ -61,12 +61,6 @@ func (t *ApiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 			resetS := res.Header.Get("x-esi-error-limit-reset")
 			tokensS := res.Header.Get("x-esi-error-limit-remain")
 
-			// Tick up and log any errors
-			if res.StatusCode >= 400 {
-				metricAPIErrors.Inc()
-				log.Printf("St: %d Res: %s Tok: %s - %s\n", res.StatusCode, resetS, tokensS, req.URL)
-			}
-
 			// If we cannot decode this is likely from another source.
 			esiRateLimiter := true
 			reset, err := strconv.ParseFloat(resetS, 64)
@@ -78,6 +72,15 @@ func (t *ApiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 				esiRateLimiter = false
 			}
 
+			// Tick up and log any errors
+			if res.StatusCode >= 400 {
+				metricAPIErrors.Inc()
+				log.Printf("St: %d Res: %s Tok: %s - %s\n", res.StatusCode, resetS, tokensS, req.URL)
+				if !esiRateLimiter { // Not an ESI error
+					time.Sleep(time.Second * time.Duration(tries))
+				}
+			}
+
 			// Backoff
 			if res.StatusCode == 420 { // Something went wrong
 				time.Sleep(time.Duration(reset) * time.Second)
@@ -85,8 +88,6 @@ func (t *ApiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 				percentRemain := 1 - (tokens / 100)
 				duration := reset * percentRemain
 				time.Sleep(time.Second * time.Duration(duration))
-			} else if !esiRateLimiter { // Not an ESI error
-				time.Sleep(time.Second * time.Duration(tries))
 			}
 
 			// Get out for "our bad" statuses
