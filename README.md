@@ -7,8 +7,9 @@ This can be used to keep a database synchronized with the current market state, 
 The microservice will spawn one goroutine (think lightweight thread) per market and collect the next available set of data when the cache time expires. Pages are also concurrently pulled with a concurrency limit of 100 requests in flight to keep everything to one https connection. 
 
 ## dockerized
+The docker containers are from scratch and do not have ca-certs available, provide your systems ca-certs or an alternative location.
 
-`docker run antihax/eve-marketwatch -p 3005:3005`
+`docker run antihax/eve-marketwatch -p 3005:3005 -v /etc/ssl/certs:/etc/ssl/certs`
 
 ## compilation
 
