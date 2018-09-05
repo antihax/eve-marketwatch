@@ -72,10 +72,7 @@ func NewMarketWatch(refresh, tokenClientID, tokenSecret string) *MarketWatch {
 	}
 
 	// Build our private token
-	token, err := auth.TokenSource(tok)
-	if err != nil {
-		log.Println("Warning: Failed to authenticate refresh_token so only regional market will be polled")
-	}
+	token := auth.TokenSource(tok)
 
 	return &MarketWatch{
 		// ESI Client
