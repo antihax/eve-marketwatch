@@ -178,6 +178,10 @@ func (s *MarketWatch) getContractItems(contract *Contract) error {
 	items, res, err := s.esi.ESI.ContractsApi.GetContractsPublicItemsContractId(
 		context.Background(), contract.Contract.Contract.ContractId, nil,
 	)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
 	rchan <- items
 
 	// Figure out if there are more pages
