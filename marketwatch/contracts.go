@@ -97,6 +97,11 @@ func (s *MarketWatch) contractWorker(regionID int32) {
 		Restart:
 			for i := range o {
 
+				// Ignore expired contracts
+				if o[i].DateExpired.Before(time.Now()) {
+					continue
+				}
+
 				contract := Contract{Touched: start, Contract: FullContract{Contract: o[i]}}
 
 				if o[i].Type_ == "item_exchange" || o[i].Type_ == "auction" {
