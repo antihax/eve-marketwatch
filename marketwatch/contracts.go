@@ -94,6 +94,7 @@ func (s *MarketWatch) contractWorker(regionID int32) {
 		newContracts := []FullContract{}
 		// Add all the contracts together
 		for o := range rchan {
+		Restart:
 			for i := range o {
 
 				contract := Contract{Touched: start, Contract: FullContract{Contract: o[i]}}
@@ -101,14 +102,14 @@ func (s *MarketWatch) contractWorker(regionID int32) {
 				if o[i].Type_ == "item_exchange" || o[i].Type_ == "auction" {
 					err := s.getContractItems(&contract)
 					if err != nil {
-						continue
+						goto Restart
 					}
 				}
 
 				if o[i].Type_ == "auction" {
 					err := s.getContractBids(&contract)
 					if err != nil {
-						continue
+						goto Restart
 					}
 				}
 
